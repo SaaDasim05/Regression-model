@@ -1,55 +1,33 @@
 import streamlit as st
-import pandas as pd
 from sklearn.linear_model import LinearRegression
+import numpy as np
 
-# Streamlit app
+# Define the features and the target variable
+X = np.array([
+    [1000, 3, 1, 1, 2],
+    [1500, 4, 0, 1, 1],
+    [900, 2, 1, 0, 1],
+    [2000, 5, 1, 1, 3]
+])
+y = np.array([300000, 450000, 200000, 600000])  # House prices
+
+# Train the Linear Regression model
+model = LinearRegression()
+model.fit(X, y)
+
+# Streamlit interface
 st.title("House Price Prediction")
-st.write("This app predicts house prices based on user inputs.")
 
-# Define input fields
-st.write("## Enter House Features")
-area = st.number_input("House Area (in square feet):", min_value=0.0, step=1.0)
-rooms = st.number_input("Number of Rooms:", min_value=0, step=1)
-water_heating = st.selectbox("Water Heating System:", options=["Yes", "No"])
-air_conditioning = st.selectbox("Air Conditioning:", options=["Yes", "No"])
-car_parking = st.number_input("Car Parking Spaces:", min_value=0, step=1)
+# User inputs for house features
+area = st.number_input("House Area (in square feet)", min_value=1, max_value=10000, value=1000)
+rooms = st.number_input("Number of Rooms", min_value=1, max_value=10, value=3)
+water_heating = st.radio("Water Heating (1 for Yes, 0 for No)", options=[0, 1], index=0)
+air_conditioning = st.radio("Air Conditioning (1 for Yes, 0 for No)", options=[0, 1], index=0)
+car_parking = st.number_input("Number of Car Parking Spaces", min_value=0, max_value=10, value=2)
 
-# Convert categorical inputs to numerical
-water_heating_value = 1 if water_heating == "Yes" else 0
-air_conditioning_value = 1 if air_conditioning == "Yes" else 0
+# Predict the house price
+user_features = np.array([[area, rooms, water_heating, air_conditioning, car_parking]])
+predicted_price = model.predict(user_features)
 
-# Create input dataframe
-input_data = pd.DataFrame({
-    "Area": [area],
-    "Rooms": [rooms],
-    "WaterHeating": [water_heating_value],
-    "AirConditioning": [air_conditioning_value],
-    "CarParking": [car_parking]
-})
-
-# Placeholder for linear regression model coefficients (pretrained values)
-st.write("## Note: Using pre-trained model coefficients for demonstration.")
-
-# Example pre-trained coefficients
-coefficients = {
-    "Area": 150,
-    "Rooms": 20000,
-    "WaterHeating": 5000,
-    "AirConditioning": 10000,
-    "CarParking": 3000
-}
-intercept = 50000
-
-# Predict house price
-price = (
-    coefficients["Area"] * input_data["Area"].iloc[0] +
-    coefficients["Rooms"] * input_data["Rooms"].iloc[0] +
-    coefficients["WaterHeating"] * input_data["WaterHeating"].iloc[0] +
-    coefficients["AirConditioning"] * input_data["AirConditioning"].iloc[0] +
-    coefficients["CarParking"] * input_data["CarParking"].iloc[0] +
-    intercept
-)
-
-# Display the predicted price
-st.write("## Predicted House Price")
-st.write(f"$ {price:,.2f}")
+# Display the result
+st.write(f"The predicted house price is: ${predicted_price[0]:,.2f}")
