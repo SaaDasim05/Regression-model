@@ -1,71 +1,65 @@
 import streamlit as st
 import pandas as pd
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Title
-st.title("Linear Regression Model App")
+# Streamlit UI
+st.title("Simple Linear Regression (SLR) with CSV Upload")
 
-# Sidebar for user input
-st.sidebar.header("Upload Your Dataset")
-file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
+# File uploader for CSV
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
-if file is not None:
-    # Load dataset
-    data = pd.read_csv(file)
-    st.write("### Dataset Preview")
-    st.dataframe(data.head())
+if uploaded_file is not None:
+    # Read the CSV file into a pandas dataframe
+    df = pd.read_csv(uploaded_file)
 
-    # Feature selection
-    st.sidebar.header("Model Configuration")
-    features = st.sidebar.multiselect("Select Feature Columns", options=data.columns)
-    target = st.sidebar.selectbox("Select Target Column", options=data.columns)
+    # Display the dataframe
+    st.subheader("Dataset")
+    st.write(df.head())
 
-    if features and target:
-        X = data[features]
-        y = data[target]
+    # Select the feature and label from the dataframe
+    features = st.selectbox("Select the feature (X)", df.columns)
+    label = st.selectbox("Select the label (Y)", df.columns)
 
-        # Split data
-        test_size = st.sidebar.slider("Test Size (%)", min_value=10, max_value=50, value=20, step=5) / 100
-        random_state = st.sidebar.number_input("Random State (Optional)", value=0, step=1)
+    # Ensure the feature and label are not the same
+    if features != label:
+        if st.button("Train Model"):
+            # Split the dataset into train and test
+            X = df[[features]]  # Feature should be a 2D array
+            y = df[label]       # Label is a 1D array
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+            # Check if there are missing values in the selected columns
+            if X.isnull().sum().any() or y.isnull().sum() > 0:
+                st.error("The dataset contains missing values. Please clean the data.")
+            else:
+                # Split into training and testing sets
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Model training
-        model = LinearRegression()
-        model.fit(X_train, y_train)
+                # Create a Linear Regression model
+                model = LinearRegression()
+                model.fit(X_train, y_train)
 
-        # Predictions
-        y_pred = model.predict(X_test)
+                # Make predictions
+                y_pred = model.predict(X_test)
 
-        # Model performance
-        mse = mean_squared_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
+                # Display results
+                st.subheader("Model Results")
+                st.write(f"Mean Squared Error: {mean_squared_error(y_test, y_pred)}")
+                st.write(f"R-squared: {r2_score(y_test, y_pred)}")
 
-        st.write("### Model Performance")
-        st.write(f"Mean Squared Error (MSE): {mse:.2f}")
-        st.write(f"R-squared (R2): {r2:.2f}")
-
-        # Visualizations
-        st.write("### Predictions vs Actual")
-        fig, ax = plt.subplots()
-        ax.scatter(y_test, y_pred, alpha=0.7)
-        ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
-        ax.set_xlabel("Actual")
-        ax.set_ylabel("Predicted")
-        ax.set_title("Actual vs Predicted")
-        st.pyplot(fig)
-
-        # Display coefficients
-        st.write("### Model Coefficients")
-        coefficients = pd.DataFrame({
-            "Feature": features,
-            "Coefficient": model.coef_
-        })
-        st.dataframe(coefficients)
+                # Plot the regression line
+                plt.figure(figsize=(10, 6))
+                plt.scatter(X_test, y_test, color="blue", label="Actual")
+                plt.plot(X_test, y_pred, color="red", label="Predicted")
+                plt.xlabel(features)
+                plt.ylabel(label)
+                plt.title(f"{features} vs {label}")
+                plt.legend()
+                st.pyplot(plt)
     else:
-        st.write("Please select at least one feature and a target variable.")
+        st.error("Feature and label cannot be the same. Please select different columns.")
+
 else:
-    st.write("Please upload a CSV file to get started.")
+    st.warning("Please upload a CSV file to get started.")
