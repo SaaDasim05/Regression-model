@@ -1,33 +1,60 @@
 import streamlit as st
-from sklearn.linear_model import LinearRegression
+import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
 
-# Define the features and the target variable
-X = np.array([
-    [1000, 3, 1, 1, 2],
-    [1500, 4, 0, 1, 1],
-    [900, 2, 1, 0, 1],
-    [2000, 5, 1, 1, 3]
-])
-y = np.array([300000, 450000, 200000, 600000])  # House prices
+# Set up the Streamlit app
+def main():
+    st.title("Linear Regression Streamlit App")
 
-# Train the Linear Regression model
-model = LinearRegression()
-model.fit(X, y)
+    # Upload dataset
+    st.sidebar.header("Upload Your Dataset")
+    uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type="csv")
 
-# Streamlit interface
-st.title("House Price Prediction")
+    if uploaded_file:
+        data = pd.read_csv(uploaded_file)
+        st.write("## Dataset Preview")
+        st.write(data.head())
 
-# User inputs for house features
-area = st.number_input("House Area (in square feet)", min_value=1, max_value=10000, value=1000)
-rooms = st.number_input("Number of Rooms", min_value=1, max_value=10, value=3)
-water_heating = st.radio("Water Heating (1 for Yes, 0 for No)", options=[0, 1], index=0)
-air_conditioning = st.radio("Air Conditioning (1 for Yes, 0 for No)", options=[0, 1], index=0)
-car_parking = st.number_input("Number of Car Parking Spaces", min_value=0, max_value=10, value=2)
+        # Feature selection
+        st.sidebar.header("Select Features")
+        features = st.sidebar.multiselect("Select independent variables (X)", options=data.columns)
+        target = st.sidebar.selectbox("Select dependent variable (Y)", options=data.columns)
 
-# Predict the house price
-user_features = np.array([[area, rooms, water_heating, air_conditioning, car_parking]])
-predicted_price = model.predict(user_features)
+        if features and target:
+            X = data[features]
+            y = data[target]
 
-# Display the result
-st.write(f"The predicted house price is: ${predicted_price[0]:,.2f}")
+            # Train-test split
+            test_size = st.sidebar.slider("Test set size", 0.1, 0.5, 0.2)
+            random_state = st.sidebar.number_input("Random state", value=42, step=1)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+            # Train Linear Regression model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+
+            # Predictions and evaluation
+            y_pred = model.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+
+            st.write("## Model Evaluation")
+            st.write(f"Mean Squared Error (MSE): {mse:.2f}")
+            st.write(f"R-squared (R2): {r2:.2f}")
+
+            # Visualization
+            st.write("## Prediction vs Actual Plot")
+            plt.figure(figsize=(8, 6))
+            plt.scatter(y_test, y_pred, color='blue', edgecolor='k')
+            plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+            plt.xlabel("Actual Values")
+            plt.ylabel("Predicted Values")
+            plt.title("Prediction vs Actual")
+            st.pyplot(plt)
+
+if __name__ == "__main__":
+    main()
