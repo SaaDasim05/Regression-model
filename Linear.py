@@ -1,60 +1,72 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-import matplotlib.pyplot as plt
 
-# Set up the Streamlit app
-def main():
-    st.title("Linear Regression Streamlit App")
+# Title
+st.title("Linear Regression Model App")
 
-    # Upload dataset
-    st.sidebar.header("Upload Your Dataset")
-    uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type="csv")
+# Sidebar for user input
+st.sidebar.header("Upload Your Dataset")
+file = st.sidebar.file_uploader("Upload a CSV file", type=["csv"])
 
-    if uploaded_file:
-        data = pd.read_csv(uploaded_file)
-        st.write("## Dataset Preview")
-        st.write(data.head())
+if file is not None:
+    # Load dataset
+    data = pd.read_csv(file)
+    st.write("### Dataset Preview")
+    st.dataframe(data.head())
 
-        # Feature selection
-        st.sidebar.header("Select Features")
-        features = st.sidebar.multiselect("Select independent variables (X)", options=data.columns)
-        target = st.sidebar.selectbox("Select dependent variable (Y)", options=data.columns)
+    # Feature selection
+    st.sidebar.header("Model Configuration")
+    features = st.sidebar.multiselect("Select Feature Columns", options=data.columns)
+    target = st.sidebar.selectbox("Select Target Column", options=data.columns)
 
-        if features and target:
-            X = data[features]
-            y = data[target]
+    if features and target:
+        X = data[features]
+        y = data[target]
 
-            # Train-test split
-            test_size = st.sidebar.slider("Test set size", 0.1, 0.5, 0.2)
-            random_state = st.sidebar.number_input("Random state", value=42, step=1)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+        # Split data
+        test_size = st.sidebar.slider("Test Size (%)", min_value=10, max_value=50, value=20, step=5) / 100
+        random_state = st.sidebar.number_input("Random State (Optional)", value=0, step=1)
 
-            # Train Linear Regression model
-            model = LinearRegression()
-            model.fit(X_train, y_train)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-            # Predictions and evaluation
-            y_pred = model.predict(X_test)
-            mse = mean_squared_error(y_test, y_pred)
-            r2 = r2_score(y_test, y_pred)
+        # Model training
+        model = LinearRegression()
+        model.fit(X_train, y_train)
 
-            st.write("## Model Evaluation")
-            st.write(f"Mean Squared Error (MSE): {mse:.2f}")
-            st.write(f"R-squared (R2): {r2:.2f}")
+        # Predictions
+        y_pred = model.predict(X_test)
 
-            # Visualization
-            st.write("## Prediction vs Actual Plot")
-            plt.figure(figsize=(8, 6))
-            plt.scatter(y_test, y_pred, color='blue', edgecolor='k')
-            plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
-            plt.xlabel("Actual Values")
-            plt.ylabel("Predicted Values")
-            plt.title("Prediction vs Actual")
-            st.pyplot(plt)
+        # Model performance
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
 
-if __name__ == "__main__":
-    main()
+        st.write("### Model Performance")
+        st.write(f"Mean Squared Error (MSE): {mse:.2f}")
+        st.write(f"R-squared (R2): {r2:.2f}")
+
+        # Visualizations
+        st.write("### Predictions vs Actual")
+        fig, ax = plt.subplots()
+        ax.scatter(y_test, y_pred, alpha=0.7)
+        ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
+        ax.set_xlabel("Actual")
+        ax.set_ylabel("Predicted")
+        ax.set_title("Actual vs Predicted")
+        st.pyplot(fig)
+
+        # Display coefficients
+        st.write("### Model Coefficients")
+        coefficients = pd.DataFrame({
+            "Feature": features,
+            "Coefficient": model.coef_
+        })
+        st.dataframe(coefficients)
+    else:
+        st.write("Please select at least one feature and a target variable.")
+else:
+    st.write("Please upload a CSV file to get started.")
